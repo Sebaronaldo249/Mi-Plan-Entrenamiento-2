@@ -1,0 +1,1242 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plan de Entrenamiento Interactivo - Sebastian Diaz Gallardo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /*<!-- Chosen Palette: Calm Neutrals -->*/
+        /*<!-- Application Structure Plan: La aplicación está diseñada como un panel de control de una sola página con navegación por pestañas. Se ha unificado el "Panel de Control" y "Mi Plan" en una única pestaña "Mi Plan" para una experiencia más cohesiva y simplificada. Esta arquitectura ahora centraliza toda la información procesable (plan diario, progreso semanal, detalles de entrenamiento) en un solo lugar, mientras que el contenido de referencia (seguridad, fundamentos) permanece en pestañas separadas. Esta estructura está optimizada para la usabilidad y la adherencia, guiando al usuario a través de su viaje de recuperación y fitness. -->*/
+        /*<!-- Visualization & Content Choices: 
+            - Perfil de Usuario y Resumen Diario -> Objetivo: Informar y procesar -> Método: Tarjetas HTML dentro de la pestaña "Mi Plan" con campos de entrada interactivos para peso -> Interacción: El usuario puede modificar el peso y actualizar el IMC dinámicamente (en tiempo real); el slider de semana actualiza las tarjetas y el gráfico -> Justificación: Vista inmediata de métricas clave y plan del día en el contexto del plan general, con capacidad de simulación de cambio de peso.
+            - Plan de 12 Semanas -> Objetivo: Organizar y mostrar cambio -> Método: Gráfico de líneas interactivo (Chart.js) y tarjetas de entrenamiento semanales -> Interacción: El usuario selecciona la semana para actualizar las tarjetas y el gráfico -> Justificación: Visualiza la progresión y proporciona pasos procesables para cada semana.
+            - Pautas de Seguridad -> Objetivo: Informar y Organizar -> Método: Línea de tiempo/acordeón HTML/CSS interactivo -> Interacción: Clic en una fase para expandir detalles -> Justificación: Desglosa la información crítica de seguridad en fragmentos manejables y específicos del contexto de recuperación.
+            - Ejercicios de Core -> Objetivo: Organizar e Instruir -> Método: Acordeón HTML -> Interacción: Clic para expandir detalles del ejercicio -> Justificación: Presenta un plan de ejercicios progresivo sin abrumar al usuario.
+            - Todos los gráficos y diagramas se realizan con Canvas (a través de Chart.js) o HTML/CSS estructurado para evitar SVG.
+        -->*/
+        /*<!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->*/
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f4f4f5; /* zinc-100 */
+            /* Removed background image for Zoro */
+            color: #zinc-800; /* Default text color, adjust as needed for readability */
+        }
+        @import url('https://rsms.me/inter/inter.css');
+        .tab-active {
+            border-bottom-color: #2563eb; /* blue-600 */
+            color: #1e3a8a; /* blue-900 */
+            font-weight: 600;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 450px; /* Increased height */
+            max-height: 60vh; /* Increased max-height */
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 500px; /* Increased height for larger screens */
+            }
+        }
+        /* Table styles for better readability (kept for general tables, but not for weight progress) */
+        .styled-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 0.9em;
+            min-width: 400px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
+            border-radius: 8px;
+            overflow: hidden; /* Ensures rounded corners apply to content */
+        }
+        .styled-table thead tr {
+            background-color: #2563eb; /* blue-600 */
+            color: #ffffff;
+            text-align: left;
+        }
+        .styled-table th,
+        .styled-table td {
+            padding: 12px 15px;
+            border: 1px solid #dddddd;
+        }
+        .styled-table tbody tr {
+            border-bottom: 1px solid #dddddd;
+        }
+        .styled-table tbody tr:nth-of-type(even) {
+            background-color: #f3f3f3;
+        }
+        .styled-table tbody tr:last-of-type {
+            border-bottom: 2px solid #2563eb; /* blue-600 */
+        }
+        .styled-table tbody tr.active-row {
+            font-weight: bold;
+            color: #2563eb; /* blue-600 */
+        }
+        /* Reverted transparency for content blocks */
+        .bg-white {
+            background-color: #ffffff;
+        }
+        .bg-zinc-50 {
+            background-color: #fafafa; /* zinc-50 */
+        }
+        .bg-blue-50 {
+            background-color: #eff6ff; /* blue-50 */
+        }
+        .bg-yellow-50 {
+            background-color: #fffbeb; /* yellow-50 */
+        }
+        header, footer {
+            background-color: #ffffff; /* white */
+        }
+    </style>
+</head>
+<body class="bg-zinc-100 text-zinc-800">
+
+    <header class="bg-white shadow-md sticky top-0 z-10">
+        <div class="container mx-auto px-4 py-4">
+            <h1 class="text-2xl md:text-3xl font-bold text-blue-900">Plan de Entrenamiento Interactivo</h1>
+            <p class="text-md text-zinc-600">Sebastian Diaz Gallardo</p>
+        </div>
+    </header>
+
+    <main class="container mx-auto p-4 md:p-6">
+        <!-- Welcome Message -->
+        <div class="bg-white p-6 rounded-lg shadow-sm text-center mb-6">
+            <h2 class="text-2xl font-bold text-blue-800 mb-4">¡Bienvenido, Sebastián!</h2>
+            <ul class="list-disc list-inside text-zinc-700 space-y-2">
+                <li>Hoy marcas el inicio de un viaje que no solo transformará tu salud, sino también tu forma de vivir, sentir y conectarte contigo mismo. Este es tu momento.</li>
+                <li>Estás por iniciar un camino de sanación y crecimiento, donde cuerpo, mente y alma se alinean para llevarte hacia una vida más consciente y plena.</li>
+                <li>Tu transformación comienza hoy: más energía, mejor salud, y claridad para alcanzar todo lo que te propones. Este camino está hecho a tu medida.</li>
+            </ul>
+        </div>
+
+        <nav class="bg-white rounded-lg shadow-sm mb-6">
+            <div class="flex border-b border-zinc-200">
+                <button class="tab-btn flex-1 py-3 px-2 text-center text-sm md:text-base text-zinc-600 border-b-2 border-transparent hover:bg-zinc-50" data-tab="plan">
+                    <span class="hidden sm:inline">🗓️</span> Mi Plan y Progreso
+                </button>
+                <button class="tab-btn flex-1 py-3 px-2 text-center text-sm md:text-base text-zinc-600 border-b-2 border-transparent hover:bg-zinc-50" data-tab="safety">
+                    <span class="hidden sm:inline">🛡️</span> Seguridad y Core
+                </button>
+                <button class="tab-btn flex-1 py-3 px-2 text-center text-sm md:text-base text-zinc-600 border-b-2 border-transparent hover:bg-zinc-50" data-tab="science">
+                    <span class="hidden sm:inline">🔬</span> Fundamentos
+                </button>
+            </div>
+        </nav>
+
+        <div id="content-area">
+        </div>
+    </main>
+    
+    <footer class="text-center py-6 text-sm text-zinc-500">
+        <p>Este plan es una guía. Escucha siempre a tu cuerpo y consulta a tu médico.</p>
+    </footer>
+
+    <script>
+        const appState = {
+            currentTab: 'plan', // Default to 'plan' tab
+            currentWeek: 1, 
+            selectedWeightWeek: 1, // New state variable for selected week in weight input
+        };
+
+        const userData = {
+            name: "Sebastian Diaz Gallardo",
+            age: 32,
+            weight: 88.6,
+            height: 167, // height in cm
+            imc: 31.6,
+            condition: "Obesidad Tipo 1",
+            surgery: "Hernioplastia crural simple sin malla (finales de Abril 2025)"
+        };
+
+        const planData = [
+            // Semanas 1-12
+            {
+                week: 1,
+                phase: 1,
+                treadmill: {
+                    warmup: { duration: 5, speed: "3.0-4.0", incline: "0°", activity: "Caminata suave y movimientos articulares" },
+                    main: { type: "LISS (Caminata)", duration_total: 20, speed: "4.0-5.0", incline: "0-1°", description: "Mantén un ritmo constante y cómodo." },
+                    cooldown: { duration: 5, speed: "3.0-4.0", incline: "0°", activity: "Caminata suave y estiramientos" }
+                }
+            },
+            {
+                week: 2,
+                phase: 1,
+                treadmill: {
+                    warmup: { duration: 5, speed: "3.0-4.0", incline: "0°", activity: "Caminata suave y movimientos articulares" },
+                    main: { type: "LISS (Caminata)", duration_total: 25, speed: "4.0-5.0", incline: "0-1°", description: "Mantén un ritmo constante y cómodo." },
+                    cooldown: { duration: 5, speed: "3.0-4.0", incline: "0°", activity: "Caminata suave y estiramientos" }
+                }
+            },
+            {
+                week: 3,
+                phase: 1,
+                treadmill: {
+                    warmup: { duration: 5, speed: "3.0-4.0", incline: "0°", activity: "Caminata suave y movimientos articulares" },
+                    main: { type: "LISS (Caminata)", duration_total: 25, speed: "4.5-5.5", incline: "1-2°", description: "Aumenta ligeramente la velocidad e inclinación si te sientes cómodo." },
+                    cooldown: { duration: 5, speed: "3.0-4.0", incline: "0°", activity: "Caminata suave y estiramientos" }
+                }
+            },
+            {
+                week: 4,
+                phase: 1,
+                treadmill: {
+                    warmup: { duration: 5, speed: "3.0-4.0", incline: "0°", activity: "Caminata suave y movimientos articulares" },
+                    main: { type: "LISS (Caminata)", duration_total: 30, speed: "4.5-5.5", incline: "1-2°", description: "Mantén la duración y evalúa tu comodidad con la inclinación." },
+                    cooldown: { duration: 5, speed: "3.0-4.0", incline: "0°", activity: "Caminata suave y estiramientos" }
+                }
+            },
+            {
+                week: 5,
+                phase: 2,
+                treadmill: {
+                    warmup: { duration: 5, speed: "3.0-4.0", incline: "0°", activity: "Caminata suave y movimientos articulares" },
+                    main: { type: "MISS (Caminata/Trote Ligero)", duration_total: 30, speed: "5.5-6.5", incline: "2-3°", description: "Introduce intervalos muy cortos de trote ligero (ej. 30 seg trote, 2 min caminata) if no hay dolor." },
+                    cooldown: { duration: 5, speed: "3.0-4.0", incline: "0°", activity: "Caminata suave y estiramientos" }
+                }
+            },
+            {
+                week: 6,
+                phase: 2,
+                treadmill: {
+                    warmup: { duration: 5, speed: "3.0-4.0", incline: "0°", activity: "Caminata suave y movimientos articulares" },
+                    main: { type: "MISS (Caminata/Trote Ligero)", duration_total: 35, speed: "5.5-6.5", incline: "2-3°", description: "Aumenta la duración de los intervalos de trote if te sientes bien." },
+                    cooldown: { duration: 5, speed: "3.0-4.0", incline: "0°", activity: "Caminata suave y estiramientos" }
+                }
+            },
+            {
+                week: 7,
+                phase: 2,
+                treadmill: {
+                    warmup: { duration: 5, speed: "3.0-4.0", incline: "0°", activity: "Caminata suave y movimientos articulares" },
+                    main: { type: "MISS (Caminata/Trote Ligero)", duration_total: 35, speed: "6.0-7.0", incline: "3-5°", description: "Prioriza la inclinación sobre la velocidad para aumentar la intensidad con bajo impacto." },
+                    cooldown: { duration: 5, speed: "3.0-4.0", incline: "0°", activity: "Caminata suave y estiramientos" }
+                }
+            },
+            {
+                week: 8,
+                phase: 2,
+                treadmill: {
+                    warmup: { duration: 5, speed: "3.0-4.0", incline: "0°", activity: "Caminata suave y movimientos articulares" },
+                    main: { type: "MISS (Caminata/Trote Ligero)", duration_total: 40, speed: "6.0-7.0", incline: "3-5°", description: "Mantén la duración y la intensidad, preparándote para la siguiente fase." },
+                    cooldown: { duration: 5, speed: "3.0-4.0", incline: "0°", activity: "Caminata suave y estiramientos" }
+                }
+            },
+            {
+                week: 9,
+                phase: 3,
+                treadmill: {
+                    warmup: { duration: 5, speed: "3.0-4.0", incline: "0°", activity: "Caminata suave y movimientos articulares" },
+                    main: {
+                        type: "HIIT + MISS",
+                        intervalos: 8,
+                        esfuerzo_duration: "1 min",
+                        esfuerzo_speed: "10-12",
+                        esfuerzo_incline: "0-1°",
+                        recuperacion_duration: "2 min",
+                        recuperacion_speed: "5-7",
+                        recuperacion_incline: "0-1°",
+                        miss_duration: 40,
+                        miss_speed: "6.0-7.0",
+                        miss_incline: "5-8°",
+                        description: "Realiza 8 ciclos de HIIT, seguido de una sesión de MISS."
+                    },
+                    cooldown: { duration: 5, speed: "3.0-4.0", incline: "0°", activity: "Caminata suave y estiramientos" }
+                }
+            },
+            {
+                week: 10,
+                phase: 3,
+                treadmill: {
+                    warmup: { duration: 5, speed: "3.0-4.0", incline: "0°", activity: "Caminata suave y movimientos articulares" },
+                    main: {
+                        type: "HIIT + MISS",
+                        intervalos: 10,
+                        esfuerzo_duration: "1 min",
+                        esfuerzo_speed: "10-12",
+                        esfuerzo_incline: "0-1°",
+                        recuperacion_duration: "2 min",
+                        recuperacion_speed: "5-7",
+                        recuperacion_incline: "0-1°",
+                        miss_duration: 45,
+                        miss_speed: "6.0-7.0",
+                        miss_incline: "5-8°",
+                        description: "Aumenta a 10 ciclos de HIIT, seguido de una sesión de MISS."
+                    },
+                    cooldown: { duration: 5, speed: "3.0-4.0", incline: "0°", activity: "Caminata suave y estiramientos" }
+                }
+            },
+            {
+                week: 11,
+                phase: 3,
+                treadmill: {
+                    warmup: { duration: 5, speed: "3.0-4.0", incline: "0°", activity: "Caminata suave y movimientos articulares" },
+                    main: {
+                        type: "HIIT + MISS/LISS",
+                        intervalos: 12,
+                        esfuerzo_duration: "1 min",
+                        esfuerzo_speed: "12-15",
+                        esfuerzo_incline: "0-2°",
+                        recuperacion_duration: "2 min",
+                        recuperacion_speed: "6-8",
+                        recuperacion_incline: "0-2°",
+                        miss_liss_duration: 45,
+                        miss_liss_speed: "6.0-8.0",
+                        miss_liss_incline: "8-10°",
+                        description: "Incrementa a 12 ciclos de HIIT con mayor velocidad e inclinación. Continúa con MISS/LISS."
+                    },
+                    cooldown: { duration: 5, speed: "3.0-4.0", incline: "0°", activity: "Caminata suave y estiramientos" }
+                }
+            },
+            {
+                week: 12,
+                phase: 3,
+                treadmill: {
+                    warmup: { duration: 5, speed: "3.0-4.0", incline: "0°", activity: "Caminata suave y movimientos articulares" },
+                    main: {
+                        type: "HIIT + MISS/LISS",
+                        intervalos: 15,
+                        esfuerzo_duration: "1 min",
+                        esfuerzo_speed: "12-15",
+                        esfuerzo_incline: "0-2°",
+                        recuperacion_duration: "2 min",
+                        recuperacion_speed: "6-8",
+                        recuperacion_incline: "0-2°",
+                        miss_liss_duration: 50,
+                        miss_liss_speed: "6.0-8.0",
+                        miss_liss_incline: "8-10°",
+                        description: "Máxima progresión de HIIT con 15 ciclos. Finaliza con una sesión más larga de MISS/LISS."
+                    },
+                    cooldown: { duration: 5, speed: "3.0-4.0", incline: "0°", activity: "Caminata suave y estiramientos" }
+                }
+            },
+        ];
+
+        const strengthData = {
+            phase1: {
+                title: "Fase 1: Recuperación (Semanas 1-4)",
+                description: "Enfoque en la cicatrización. Solo ejercicios de core muy suaves. Sin levantamiento de pesas.",
+                exercises: [
+                    { name: "Ejercicios de Core (Tabla 2)", sets: "3-4", reps: "10-15 reps/30-60 seg", note: "Solo los ejercicios de nivel inicial." }
+                ]
+            },
+            phase2: {
+                title: "Fase 2: Progresión (Semanas 5-8)",
+                description: "Introducción cautelosa de fuerza con peso corporal o bandas de resistencia.",
+                exercises: [
+                    { name: "Sentadillas (Asistida a silla)", sets: "3", reps: "10-15", note: "Controlar el rango de movimiento." },
+                    { name: "Flexiones de Pared/Rodillas", sets: "3", reps: "8-15", note: "Mantener core estable." },
+                    { name: "Zancadas (Peso corporal)", sets: "3", reps: "8-12 por pierna", note: "Movimiento suave, sin dolor." },
+                    { name: "Remo con Banda de Resistencia", sets: "3", reps: "12-15", note: "Evitar tensión abdominal." },
+                    { name: "Ejercicios de Core (Tabla 2)", sets: "3-4", reps: "10-15 reps/30-60 seg", note: "Progresar a ejercicios intermedios if no hay dolor." }
+                ]
+            },
+            phase3: {
+                title: "Fase 3: Optimización (Semanas 9-12+)",
+                description: "Reintroducción gradual de pesas y máquinas. Priorizar técnica sobre peso. **Requiere aprobación médica explícita.**",
+                exercises: [
+                    { name: "Prensa de Piernas (Máquina)", sets: "3", reps: "10-15", note: "Iniciar con peso muy ligero." },
+                    { name: "Press de Pecho (Máquina o mancuernas ligeras)", sets: "3", reps: "10-15", note: "Carga muy conservadora." },
+                    { name: "Remo (Máquina o mancuernas ligeras)", sets: "3", reps: "10-15", note: "Mantener espalda recta y core estable." },
+                    { name: "Press de Hombros (Sentado, mancuernas ligeras)", sets: "3", reps: "10-15", note: "Espalda apoyada para estabilidad." },
+                    { name: "Ejercicios de Core (Tabla 2)", sets: "3-4", reps: "10-15 reps/30-60 seg", note: "Progresar a avanzados con extrema precaución." }
+                ]
+            }
+        };
+
+        const coreExercisesData = [
+            { exercise: "Inclinación Pélvica (Estabilizador Local)", description: "Acostado boca arriba, contraer abdomen para bascular pelvis hacia atrás, aplanando la espalda baja contra el suelo. Mantener la contracción durante 5-10 segundos.", progression: "Inicial", phase: "0-2 Semanas", notes: "Movimiento suave, enfoque en activación profunda del transverso abdominal. No debe haber dolor." },
+            { exercise: "Activación del Transverso Abdominal (Estabilizador Local)", description: "De pie o sentado, lleva suavemente el ombligo hacia la columna vertebral, como si intentaras abrochar un pantalón apretado, sin mover el tronco. Mantener 5-10 segundos.", progression: "Inicial", phase: "0-2 Semanas", notes: "Mantener respiración normal y fluida. Evitar la Maniobra de Valsalva. Sensación de 'faja' interna." },
+            { exercise: "Respiración Diafragmática (Estabilizador Local)", description: "Acostado, coloca una mano en el pecho y otra en el abdomen. Inhala profundamente por la nariz, sintiendo cómo se eleva el abdomen (no el pecho). Exhala lentamente por la boca. Enfocarse en la expansión abdominal.", progression: "Inicial", phase: "0-2 Semanas", notes: "Realizar frecuentemente (4+ veces/día). Ayuda a activar el diafragma, un músculo clave del core." },
+            { exercise: "Toques de Talón Acostado (Estabilizador Global)", description: "Acostado boca arriba con rodillas flexionadas a 90°, pies en el suelo. Mantén el core contraído (ombligo hacia el suelo) y baja lentamente un talón hacia el suelo, sin que la espalda se arquee. Vuelve a la posición inicial y alterna.", progression: "Intermedio", phase: "2-6 Semanas", notes: "Controlar el movimiento. If la espalda se arquea, no bajes tanto la pierna. Priorizar la estabilidad del core." },
+            { exercise: "Bird-Dog (Estabilizador Global)", description: "En posición de cuadrupedia (manos bajo hombros, rodillas bajo caderas). Extiende lentamente un brazo hacia adelante y la pierna opuesta hacia atrás, manteniendo la espalda recta y el core estable. Evita la rotación de la cadera. Mantener 3-5 segundos.", progression: "Intermedio", phase: "2-6 Semanas", notes: "Movimiento lento y controlado. Evitar hiperextensión de la columna lumbar. El core debe permanecer inmóvil." },
+            { exercise: "Gato/Vaca (Movilidad y Estabilidad)", description: "En cuadrupedia, redondear la espalda (posición de gato) llevando el ombligo hacia la columna, luego arquear suavemente la espalda (posición de vaca) sin dejar caer el abdomen. Movimientos fluidos.", progression: "Intermedio", phase: "2-6 Semanas", notes: "Movimientos suaves y controlados, sincronizados con la respiración. No forzar el rango if hay dolor." },
+            { exercise: "Plancha (Plank) (Estabilizador Global)", description: "Mantener el cuerpo en línea recta desde la cabeza hasta los talones, apoyándose en los antebrazos y las puntas de los pies (o rodillas para progresión inicial). Mantener el abdomen contraído.", progression: "Inicial: sobre rodillas. Intermedio: rodillas elevadas. Avanzado: plancha completa.", phase: "6+ Semanas (con aprobación)", notes: "Mantener línea recta, no arquear espalda baja ni subir demasiado la cadera. Progresar lentamente la duración (ej. 20-60 segundos)." },
+            { exercise: "Puente de Glúteos (Glute Bridge) (Estabilizador Global)", description: "Acostado boca arriba, rodillas flexionadas, pies en el suelo. Elevar las caderas del suelo contrayendo los glúteos hasta formar una línea recta desde los hombros hasta las rodillas. Mantener 2-3 segundos.", progression: "Intermedio a Avanzado", phase: "6+ Semanas (con aprobación)", notes: "Enfocarse en la contracción de glúteos y core. Evitar hiperextensión lumbar. Útil para fortalecer la cadena posterior." },
+            { exercise: "Dead Bug (Estabilizador Global)", description: "Acostado boca arriba, rodillas flexionadas a 90°, brazos extendidos hacia el techo. Baja lentamente el brazo derecho y la pierna izquierda hacia el suelo al mismo tiempo, manteniendo la espalda baja pegada al suelo. Regresa y alterna.", progression: "Avanzado", phase: "6+ Semanas (con aprobación y extrema precaución)", notes: "Controlar la zona lumbar para que no se arquee. Movimiento lento y deliberado. If la espalda se arquea, no bajes tanto las extremidades." },
+            { exercise: "Crunches (Abdominales) (Estabilizador Global)", description: "Elevar cabeza/hombros del suelo, contrayendo el abdomen. NO tirar del cuello.", progression: "Inicial: Chin tuck. Intermedio: Rodillas elevadas. Avanzado: Crunch completo.", phase: "6+ Semanas (con aprobación)", notes: "MUY gradual. Detener if hay dolor o presión. Evitar Valsalva. La calidad del movimiento es más importante que la cantidad." },
+            { exercise: "Flutter Kicks (Estabilizador Global)", description: "Acostado boca arriba, piernas extendidas. Realiza pequeñas patadas de aleteo con las piernas, manteniendo la espalda baja pegada al suelo y el core contraído.", progression: "Inicial: Elevación de una pierna (45°). Intermedio: Apoyo en codos. Avanzado: Sin apoyo de manos.", phase: "6+ Semanas (con aprobación)", notes: "Mantener el core apretado, ombligo hacia la columna. If la espalda se arquea, eleva más las piernas o reduce el rango de movimiento." },
+            { exercise: "Ejercicios Oblicuos (Estabilizador Global)", description: "Inclinaciones laterales controladas para trabajar los músculos oblicuos.", progression: "Inicial: Acostado, alcanzar talones. Intermedio: De pie, inclinación suave. Avanzado: De pie con pesas ligeras (1-2 lbs).", phase: "6+ Semanas (con aprobación)", notes: "Controlar el movimiento, no forzar la rotación ni la flexión lateral excesiva. Mantener el core activado." },
+            { exercise: "Rodillo de Rodilla Inverso / Curl (Estabilizador Global)", description: "Acostado boca arriba, rodillas flexionadas hacia el pecho. Elevar las caderas del suelo rodando las rodillas hacia el pecho. Controlar el descenso.", progression: "Inicial: Rodillo de rodilla (solo movimiento de rodillas). Intermedio: Curl inverso (elevar caderas). Avanzado: Curl inverso completo (con extensión de piernas).", phase: "6+ Semanas (con aprobación)", notes: "Movimientos lentos y controlados. Mantener el core contraído para evitar tensión en la zona lumbar y quirúrgica." }
+        ];
+
+        const contentArea = document.getElementById('content-area');
+
+        // Initialize weight progress data from localStorage or default
+        let weightProgress = JSON.parse(localStorage.getItem('weightProgress')) || {};
+
+        function saveWeightProgress() {
+            localStorage.setItem('weightProgress', JSON.stringify(weightProgress));
+        }
+
+        function calculateIMC(weightKg, heightCm) {
+            const heightM = heightCm / 100;
+            return (weightKg / (heightM * heightM)).toFixed(1);
+        }
+
+        function getIMCCondition(imc) {
+            if (imc < 18.5) return "Bajo peso";
+            if (imc >= 18.5 && imc < 24.9) return "Peso normal";
+            if (imc >= 25 && imc < 29.9) return "Sobrepeso";
+            if (imc >= 30 && imc < 34.9) return "Obesidad Tipo 1";
+            if (imc >= 35 && imc < 39.9) return "Obesidad Tipo 2";
+            return "Obesidad Tipo 3";
+        }
+
+        function updateUserDataDisplay() {
+            const weightInput = document.getElementById('weightInput');
+            const imcDisplay = document.getElementById('imcDisplay');
+            const conditionDisplay = document.getElementById('conditionDisplay');
+
+            if (weightInput && !isNaN(parseFloat(weightInput.value))) {
+                userData.weight = parseFloat(weightInput.value);
+                userData.imc = calculateIMC(userData.weight, userData.height);
+                userData.condition = getIMCCondition(userData.imc);
+
+                imcDisplay.textContent = userData.imc;
+                conditionDisplay.textContent = userData.condition;
+            }
+        }
+
+        function updateSummaryCards(week) {
+            const currentPlan = planData.find(p => p.week === week);
+            const currentPhaseData = `phase${currentPlan.phase}`;
+            const currentStrengthPlan = strengthData[currentPhaseData];
+
+            // Update Estado de Recuperación card
+            const recoveryStatusElement = document.getElementById('recoveryStatus');
+            const recoveryFocusElement = document.getElementById('recoveryFocus');
+            if (recoveryStatusElement && recoveryFocusElement) {
+                recoveryStatusElement.textContent = currentStrengthPlan.title;
+                recoveryFocusElement.textContent = `Foco: ${currentPlan.phase === 1 ? 'Cicatrización' : (currentPlan.phase === 2 ? 'Progresión controlada' : 'Rendimiento y fuerza')}`;
+            }
+
+            // Update Entrenamiento de Trotadora de Hoy card
+            const treadmillWeekLabel = document.getElementById('treadmillWeekLabel');
+            const warmupDetails = document.getElementById('warmupDetails');
+            const mainExerciseDetails = document.getElementById('mainExerciseDetails');
+            const cooldownDetails = document.getElementById('cooldownDetails');
+
+            if (treadmillWeekLabel && warmupDetails && mainExerciseDetails && cooldownDetails) {
+                treadmillWeekLabel.textContent = `🎯 Entrenamiento de Trotadora de Hoy (Semana ${week})`;
+                
+                warmupDetails.innerHTML = `
+                    <p><strong>Duración:</strong> ${currentPlan.treadmill.warmup.duration} min</p>
+                    <p><strong>Actividad:</strong> ${currentPlan.treadmill.warmup.activity}. Incluye **ejercicios de movilidad articular controlada** y **estiramientos dinámicos** para preparar tus músculos.</p>
+                    <p><strong>Velocidad:</strong> ${currentPlan.treadmill.warmup.speed} km/h</p>
+                    <p><strong>Inclinación:</strong> ${currentPlan.treadmill.warmup.incline}</p>
+                `;
+
+                if (currentPlan.treadmill.main.type.includes("HIIT")) {
+                    mainExerciseDetails.innerHTML = `
+                        <p><strong>Tipo:</strong> ${currentPlan.treadmill.main.type}</p>
+                        <p><strong>Descripción:</strong> ${currentPlan.treadmill.main.description}</p>
+                        <ul class="list-disc list-inside ml-4">
+                            <li><strong>Intervalos:</strong> ${currentPlan.treadmill.main.intervalos} ciclos</li>
+                            <li><strong>Esfuerzo:</strong> ${currentPlan.treadmill.main.esfuerzo_duration} a ${currentPlan.treadmill.main.esfuerzo_speed} km/h con ${currentPlan.treadmill.main.esfuerzo_incline} de inclinación</li>
+                            <li><strong>Recuperación:</strong> ${currentPlan.treadmill.main.recuperacion_duration} a ${currentPlan.treadmill.main.recuperacion_speed} km/h con ${currentPlan.treadmill.main.recuperacion_incline} de inclinación</li>
+                            ${currentPlan.treadmill.main.miss_duration ? `<li><strong>Sesión MISS/LISS Adicional:</strong> ${currentPlan.treadmill.main.miss_duration || currentPlan.treadmill.main.miss_liss_duration} min a ${currentPlan.treadmill.main.miss_speed || currentPlan.treadmill.main.miss_liss_speed} km/h con ${currentPlan.treadmill.main.miss_incline || currentPlan.treadmill.main.miss_liss_incline} de inclinación</li>` : ''}
+                        </ul>
+                    `;
+                } else {
+                    mainExerciseDetails.innerHTML = `
+                        <p><strong>Tipo:</strong> ${currentPlan.treadmill.main.type}</p>
+                        <p><strong>Duración:</strong> ${currentPlan.treadmill.main.duration_total} min</p>
+                        <p><strong>Velocidad:</strong> ${currentPlan.treadmill.main.speed} km/h</p>
+                        <p><strong>Inclinación:</strong> ${currentPlan.treadmill.main.incline}</p>
+                        <p><strong>Descripción:</strong> ${currentPlan.treadmill.main.description}</p>
+                    `;
+                }
+
+                cooldownDetails.innerHTML = `
+                    <p><strong>Duración:</strong> ${currentPlan.treadmill.cooldown.duration} min</p>
+                    <p><strong>Actividad:</strong> ${currentPlan.treadmill.cooldown.activity}. Incluye **estiramientos estáticos** para mejorar la flexibilidad y recuperación.</p>
+                    <p><strong>Velocidad:</strong> ${currentPlan.treadmill.cooldown.speed} km/h</p>
+                    <p><strong>Inclinación:</strong> ${currentPlan.treadmill.cooldown.incline}</p>
+                `;
+            }
+        }
+
+        // Function to render the compact weight progress section
+        function renderWeightProgressSection() {
+            const weekSelect = document.getElementById('weightWeekSelect');
+            const currentWeekWeightInput = document.getElementById('currentWeekWeightInput');
+            const saveButton = document.getElementById('saveCurrentWeekWeight');
+
+            // Populate the select dropdown
+            if (weekSelect) {
+                weekSelect.innerHTML = ''; // Clear previous options
+                for (let i = 1; i <= 12; i++) {
+                    const option = document.createElement('option');
+                    option.value = i;
+                    option.textContent = `${i}`; // Just the week number
+                    weekSelect.appendChild(option);
+                }
+                weekSelect.value = appState.selectedWeightWeek; // Set selected week
+                weekSelect.onchange = (e) => {
+                    appState.selectedWeightWeek = parseInt(e.target.value);
+                    currentWeekWeightInput.value = weightProgress[`week${appState.selectedWeightWeek}`] || '';
+                };
+            }
+
+            // Update input field based on selected week
+            if (currentWeekWeightInput) {
+                currentWeekWeightInput.value = weightProgress[`week${appState.selectedWeightWeek}`] || '';
+            }
+
+            if (saveButton) {
+                saveButton.onclick = () => {
+                    if (currentWeekWeightInput && !isNaN(parseFloat(currentWeekWeightInput.value))) {
+                        weightProgress[`week${appState.selectedWeightWeek}`] = parseFloat(currentWeekWeightInput.value);
+                        saveWeightProgress();
+                        createWeightProgressChart(); // Update chart
+                    }
+                };
+            }
+        }
+
+
+        function renderPlan() {
+            const currentPlan = planData.find(p => p.week === appState.currentWeek);
+            const currentPhaseData = `phase${currentPlan.phase}`;
+            const currentStrengthPlan = strengthData[currentPhaseData];
+
+            contentArea.innerHTML = `
+                <div class="bg-white p-6 rounded-lg shadow-sm">
+                    <h2 class="text-xl font-bold mb-4 text-blue-800">Mi Plan y Progreso</h2>
+                    <p class="mb-6 text-zinc-600">Aquí puedes ver un resumen de tu estado, tu plan semanal y tu progresión a lo largo de las 12 semanas. Puedes ajustar tu peso para ver cómo cambia tu IMC.</p>
+                    
+                    <div class="mb-6 flex items-center space-x-2">
+                        <label for="week-selector" class="block font-semibold">Semana:</label>
+                        <input type="number" id="week-selector" min="1" max="12" value="${appState.currentWeek}"
+                               class="w-24 p-2 border border-blue-300 rounded-md shadow-sm text-center">
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                        <div class="bg-blue-50 p-4 rounded-lg">
+                            <h3 class="font-semibold text-blue-900">Peso Actual</h3>
+                            <input type="number" id="weightInput" value="${userData.weight}" step="0.1" min="40" max="200" class="w-full mt-1 p-2 border border-blue-200 rounded-md text-2xl font-bold text-blue-700">
+                        </div>
+                        <div class="bg-blue-50 p-4 rounded-lg">
+                            <h3 class="font-semibold text-blue-900">IMC</h3>
+                            <p class="text-2xl font-bold text-blue-700" id="imcDisplay">${userData.imc}</p>
+                            <span class="text-sm text-blue-600" id="conditionDisplay">${userData.condition}</span>
+                        </div>
+                        <div class="bg-blue-50 p-4 rounded-lg">
+                            <h3 class="font-semibold text-blue-900">Estatura</h3>
+                            <p class="text-2xl font-bold text-blue-700" id="heightDisplay">${userData.height} cm</p>
+                        </div>
+                        <div class="bg-yellow-50 p-4 rounded-lg">
+                            <h3 class="font-semibold text-yellow-900">Estado de Recuperación</h3>
+                            <p class="text-md font-semibold text-yellow-800" id="recoveryStatus">${currentStrengthPlan.title}</p>
+                            <p class="text-sm text-yellow-700" id="recoveryFocus">Foco: ${currentPlan.phase === 1 ? 'Cicatrización' : (currentPlan.phase === 2 ? 'Progresión controlada' : 'Rendimiento y fuerza')}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-zinc-50 p-4 rounded-lg mb-6">
+                        <h3 class="text-lg font-semibold mb-2 text-zinc-800" id="treadmillWeekLabel">🎯 Entrenamiento de Trotadora de Hoy (Semana ${appState.currentWeek})</h3>
+                        <div class="space-y-2">
+                            <h4 class="font-semibold text-zinc-700 mt-2">Calentamiento:</h4>
+                            <div id="warmupDetails" class="ml-4 text-sm text-zinc-600">
+                                <p><strong>Duración:</strong> ${currentPlan.treadmill.warmup.duration} min</p>
+                                <p><strong>Actividad:</strong> ${currentPlan.treadmill.warmup.activity}. Incluye **ejercicios de movilidad articular controlada** y **estiramientos dinámicos** para preparar tus músculos.</p>
+                                <p><strong>Velocidad:</strong> ${currentPlan.treadmill.warmup.speed} km/h</p>
+                                <p><strong>Inclinación:</strong> ${currentPlan.treadmill.warmup.incline}</p>
+                            </div>
+                            
+                            <h4 class="font-semibold text-zinc-700 mt-2">Entrenamiento Principal:</h4>
+                            <div id="mainExerciseDetails" class="ml-4 text-sm text-zinc-600">
+                                <!-- Content will be dynamically updated based on treadmill.main.type -->
+                            </div>
+
+                            <h4 class="font-semibold text-zinc-700 mt-2">Enfriamiento:</h4>
+                            <div id="cooldownDetails" class="ml-4 text-sm text-zinc-600">
+                                <p><strong>Duración:</strong> ${currentPlan.treadmill.cooldown.duration} min</p>
+                                <p><strong>Actividad:</strong> ${currentPlan.treadmill.cooldown.activity}. Incluye **estiramientos estáticos** para mejorar la flexibilidad y recuperación.</p>
+                                <p><strong>Velocidad:</strong> ${currentPlan.treadmill.cooldown.speed} km/h</p>
+                                <p><strong>Inclinación:</strong> ${currentPlan.treadmill.cooldown.incline}</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="chart-container mb-2">
+                        <canvas id="progressChart"></canvas>
+                    </div>
+                    <div class="text-center text-sm text-zinc-600 mb-8">
+                        <p>Este gráfico muestra la progresión de la duración total del entrenamiento (línea azul) y la velocidad máxima alcanzada en la trotadora (línea verde) a lo largo de las 12 semanas de tu plan.</p>
+                    </div>
+
+                    <div id="weekly-details" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    </div>
+
+                    <!-- New Weight Progress Section - Redesigned -->
+                    <div class="bg-white p-6 rounded-lg shadow-sm mt-6">
+                        <h2 class="text-xl font-bold mb-4 text-blue-800">📊 Mi Progreso de Peso Semanal</h2>
+                        <p class="mb-4 text-zinc-600">Registra tu peso cada semana para visualizar tu progreso a lo largo del plan.</p>
+                        
+                        <div class="flex flex-col sm:flex-row items-end justify-between mb-4 space-y-3 sm:space-y-0 sm:space-x-4">
+                            <div class="flex items-center space-x-2 w-full sm:w-1/2">
+                                <label for="weightWeekSelect" class="text-sm font-medium text-zinc-700 whitespace-nowrap">Semana:</label>
+                                <select id="weightWeekSelect" class="p-2 border border-blue-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-base w-full">
+                                    <!-- Options will be populated by JavaScript -->
+                                </select>
+                            </div>
+                            <div class="flex items-center space-x-2 w-full sm:w-1/2">
+                                <label for="currentWeekWeightInput" class="text-sm font-medium text-zinc-700 whitespace-nowrap">Peso (Kg):</label>
+                                <input type="number" id="currentWeekWeightInput" step="0.1" min="40" max="200"
+                                       class="w-full p-3 border border-blue-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-lg"
+                                       placeholder="Ej. 85.5">
+                            </div>
+                            <button id="saveCurrentWeekWeight" class="w-full sm:w-auto mt-4 sm:mt-0 px-6 py-3 bg-blue-600 text-white font-semibold rounded-md shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-150 ease-in-out">
+                                Guardar Progreso
+                            </button>
+                        </div>
+
+                        <div class="chart-container mt-4 mb-2">
+                            <canvas id="weightProgressChart"></canvas>
+                        </div>
+                        <div class="text-center text-sm text-zinc-600 mb-8">
+                            <p>Este gráfico muestra tu progreso de peso (en kg) a lo largo de las semanas, basado en los datos que ingreses. La semana se muestra en el eje horizontal y el peso en el eje vertical.</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            renderWeeklyDetails(appState.currentWeek);
+            updateSummaryCards(appState.currentWeek); // Initial call to populate details
+            createProgressChart();
+            renderWeightProgressSection(); // Call the new function here
+            createWeightProgressChart(); // Call to create the new weight progress chart
+            
+            // Event listener for the new week selector
+            const weekSelector = document.getElementById('week-selector');
+            if (weekSelector) {
+                weekSelector.addEventListener('change', (e) => {
+                    let week = parseInt(e.target.value);
+                    // Ensure the week is within bounds
+                    if (week < 1) week = 1;
+                    if (week > 12) week = 12;
+                    e.target.value = week; // Update input value if it was out of bounds
+
+                    appState.currentWeek = week;
+                    renderWeeklyDetails(week);
+                    updateSummaryCards(week); // Call to update the summary cards
+                    appState.selectedWeightWeek = week; // Sync selected week for weight input
+                    renderWeightProgressSection(); // Update the weight input and display for the new week
+                });
+            }
+
+            document.getElementById('weightInput').addEventListener('input', updateUserDataDisplay);
+        }
+        
+        function renderWeeklyDetails(week) {
+            const weeklyDetailsContainer = document.getElementById('weekly-details');
+            const plan = planData.find(p => p.week === week);
+            const strengthPlanKey = `phase${plan.phase}`;
+            const strength = strengthData[strengthPlanKey];
+
+            let mainTreadmillDetailsHtml = '';
+            if (plan.treadmill.main.type.includes("HIIT")) {
+                mainTreadmillDetailsHtml = `
+                    <p><strong>Tipo:</strong> ${plan.treadmill.main.type}</p>
+                    <p><strong>Descripción:</strong> ${plan.treadmill.main.description}</p>
+                    <ul class="list-disc list-inside ml-4">
+                        <li><strong>Intervalos:</strong> ${plan.treadmill.main.intervalos} ciclos</li>
+                        <li><strong>Esfuerzo:</strong> ${plan.treadmill.main.esfuerzo_duration} a ${plan.treadmill.main.esfuerzo_speed} km/h con ${plan.treadmill.main.esfuerzo_incline} de inclinación</li>
+                        <li><strong>Recuperación:</strong> ${plan.treadmill.main.recuperacion_duration} a ${plan.treadmill.main.recuperacion_speed} km/h con ${plan.treadmill.main.recuperacion_incline} de inclinación</li>
+                        ${plan.treadmill.main.miss_duration ? `<li><strong>Sesión MISS/LISS Adicional:</strong> ${plan.treadmill.main.miss_duration || plan.treadmill.main.miss_liss_duration} min a ${plan.treadmill.main.miss_speed || plan.treadmill.main.miss_liss_speed} km/h con ${plan.treadmill.main.miss_incline || plan.treadmill.main.miss_liss_incline} de inclinación</li>` : ''}
+                    </ul>
+                `;
+            } else {
+                mainTreadmillDetailsHtml = `
+                    <p><strong>Tipo:</strong> ${plan.treadmill.main.type}</p>
+                    <p><strong>Duración:</strong> ${plan.treadmill.main.duration_total} min</p>
+                    <p><strong>Velocidad:</strong> ${plan.treadmill.main.speed} km/h</p>
+                    <p><strong>Inclinación:</strong> ${plan.treadmill.main.incline}</p>
+                    <p><strong>Descripción:</strong> ${plan.treadmill.main.description}</p>
+                `;
+            }
+
+            weeklyDetailsContainer.innerHTML = `
+                <div class="bg-zinc-50 p-4 rounded-lg border border-zinc-200">
+                    <h3 class="text-lg font-semibold mb-2 text-zinc-800">🏃‍♂️ Trotadora: Semana ${week}</h3>
+                    <div class="space-y-2">
+                        <p><strong>Fase del Plan:</strong> ${plan.phase} - ${strength.title.split(':')[0]}</p>
+                        ${mainTreadmillDetailsHtml}
+                        <p class="text-xs text-blue-600 mt-2">Recuerda realizar **ejercicios de movilidad articular controlada** y estiramientos dinámicos antes, y estáticos después de cada sesión.</p>
+                    </div>
+                </div>
+                <div class="bg-zinc-50 p-4 rounded-lg border border-zinc-200">
+                    <h3 class="text-lg font-semibold mb-2 text-zinc-800">💪 Activación y Fortalecimiento: Semana ${week}</h3>
+                     <p class="text-sm text-zinc-600 mb-3">${strength.description}</p>
+                    <ul class="space-y-2">
+                        ${strength.exercises.map(ex => `
+                            <li class="p-2 bg-white rounded-md">
+                                <p class="font-semibold">${ex.name}</p>
+                                <p class="text-sm text-zinc-600"><strong>Series/Repeticiones:</strong> ${ex.sets} x ${ex.reps}</p>
+                                <p class="text-xs text-blue-600">${ex.note}</p>
+                            </li>
+                        `).join('')}
+                    </ul>
+                    <p class="text-xs text-blue-600 mt-2">Recuerda realizar **ejercicios de movilidad articular controlada** y estiramientos dinámicos antes, y estáticos después de cada sesión de fuerza.</p>
+                </div>
+            `;
+        }
+
+        let progressChartInstance;
+        function createProgressChart() {
+            const ctx = document.getElementById('progressChart').getContext('2d');
+            if (progressChartInstance) {
+                progressChartInstance.destroy();
+            }
+
+            const labels = planData.map(p => `Sem ${p.week}`);
+            const durations = planData.map(p => {
+                let mainTotal = 0;
+                if (p.treadmill.main.type.includes("HIIT")) {
+                    const effortDuration = parseInt(p.treadmill.main.esfuerzo_duration.replace(/[^0-9]/g, ''));
+                    const recoveryDuration = parseInt(p.treadmill.main.recuperacion_duration.replace(/[^0-9]/g, ''));
+                    mainTotal = p.treadmill.main.intervalos * (effortDuration + recoveryDuration);
+                    if (p.treadmill.main.miss_duration) {
+                        mainTotal += p.treadmill.main.miss_duration;
+                    } else if (p.treadmill.main.miss_liss_duration) {
+                        mainTotal += p.treadmill.main.miss_liss_duration;
+                    }
+                } else {
+                    mainTotal = p.treadmill.main.duration_total;
+                }
+                return mainTotal + p.treadmill.warmup.duration + p.treadmill.cooldown.duration;
+            });
+
+            const maxSpeeds = planData.map(p => {
+                let currentMaxSpeed = 0;
+                if (p.treadmill.main.type.includes("HIIT")) {
+                    // For HIIT, consider the peak speed during effort intervals
+                    const effortSpeedStr = p.treadmill.main.esfuerzo_speed.toString();
+                    currentMaxSpeed = parseFloat(effortSpeedStr.split('-')[1]); // e.g., from "10-12" get 12
+
+                    // If there's an additional MISS/LISS session, consider its max speed too
+                    if (p.treadmill.main.miss_speed) {
+                        const missSpeedStr = p.treadmill.main.miss_speed.toString();
+                        currentMaxSpeed = Math.max(currentMaxSpeed, parseFloat(missSpeedStr.split('-')[1]));
+                    } else if (p.treadmill.main.miss_liss_speed) {
+                        const missLissSpeedStr = p.treadmill.main.miss_liss_speed.toString();
+                        currentMaxSpeed = Math.max(currentMaxSpeed, parseFloat(missLissSpeedStr.split('-')[1]));
+                    }
+                } else {
+                    // For LISS/MISS, take the highest speed from the range
+                    const speedStr = p.treadmill.main.speed.toString();
+                    currentMaxSpeed = parseFloat(speedStr.split('-')[1]); // e.g., from "4.0-5.0" get 5.0
+                }
+                return currentMaxSpeed;
+            });
+
+            progressChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Duración Total (min)',
+                        data: durations,
+                        borderColor: '#2563eb',
+                        backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                        fill: true,
+                        yAxisID: 'y',
+                    }, {
+                        label: 'Velocidad Máx (km/h)',
+                        data: maxSpeeds,
+                        borderColor: '#16a34a',
+                        backgroundColor: 'rgba(22, 163, 74, 0.1)',
+                        fill: false,
+                        yAxisID: 'y1',
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            title: { display: true, text: 'Duración Total (min)' }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            title: { display: true, text: 'Velocidad Máx (km/h)' },
+                            grid: { drawOnChartArea: false }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                        }
+                    }
+                }
+            });
+        }
+
+        let weightProgressChartInstance;
+        function createWeightProgressChart() {
+            const ctx = document.getElementById('weightProgressChart').getContext('2d');
+            if (weightProgressChartInstance) {
+                weightProgressChartInstance.destroy();
+            }
+
+            const labels = [];
+            const data = [];
+            for (let i = 1; i <= 12; i++) {
+                let labelText;
+                if (i === 1) {
+                    labelText = '1ra';
+                } else if (i === 2) {
+                    labelText = '2da';
+                } else if (i === 3) {
+                    labelText = '3ra';
+                } else {
+                    labelText = `${i}va`;
+                }
+                labels.push(labelText);
+                data.push(weightProgress[`week${i}`] || null); // Use null for missing data points
+            }
+
+            weightProgressChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Peso (kg)',
+                        data: data,
+                        borderColor: '#ef4444', // Red color for weight
+                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                        fill: true,
+                        tension: 0.1, // Smooth the line
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Mi progreso en la perdida de peso', // New title
+                            font: {
+                                size: 16
+                            }
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'category', // Weeks on X-axis
+                            display: true,
+                            title: {
+                                display: true,
+                                text: 'Semana'
+                            }
+                        },
+                        y: {
+                            type: 'linear', // Weight on Y-axis
+                            display: true,
+                            title: {
+                                display: true,
+                                text: 'Peso (kg)'
+                            },
+                            min: 70, // Set minimum to 70
+                            max: 90, // Set maximum to 90
+                            ticks: {
+                                stepSize: 2, // Set step size to 2
+                                autoSkip: false, // Disable auto-skipping of ticks
+                                maxTicksLimit: 11 // Max ticks from 70 to 90 with step 2 is (90-70)/2 + 1 = 11
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function renderSafety() {
+            contentArea.innerHTML = `
+                <div class="bg-white p-6 rounded-lg shadow-sm">
+                    <h2 class="text-xl font-bold mb-2 text-blue-800">🛡️ Progresión y Seguridad Post-Hernioplastia</h2>
+                    <p class="mb-6 text-zinc-600">Esta sección es la más importante para tu recuperación. Sigue estas fases de forma estricta y escucha siempre a tu cuerpo. La ausencia de dolor es tu principal guía.</p>
+
+                    <div class="space-y-4 mb-8">
+                        <details class="group bg-zinc-50 p-4 rounded-lg border border-zinc-200">
+                            <summary class="font-semibold text-lg cursor-pointer flex justify-between items-center">
+                                Rehabilitación Post-Hernioplastia: Evidencia Detallada
+                                <span class="text-blue-600 text-sm group-open:hidden">Mostrar</span>
+                                <span class="text-blue-600 text-sm hidden group-open:inline">Ocultar</span>
+                            </summary>
+                            <div class="mt-4 text-zinc-700 space-y-2">
+                                <h4 class="font-semibold text-md text-blue-700">1. Importancia de la reparación sin malla</h4>
+                                <p class="text-sm">La hernioplastia crural sin malla, al basarse en la sutura directa de los tejidos, requiere una cicatrización natural y más cautelosa. Esto implica un riesgo ligeramente mayor de recurrencia con esfuerzos prematuros, por lo que la progresión debe ser lenta y guiada por la ausencia de dolor. La consolidación del tejido es clave para la integridad a largo plazo.</p>
+                                <h4 class="font-semibold text-md text-blue-700">2. Ejercicios específicos para el core Post-Hernioplastia</h4>
+                                <p class="text-sm">El fortalecimiento del core es vital, pero debe evitarse la Maniobra de Valsalva (contener la respiración durante el esfuerzo). Exhala siempre en la parte más difícil del movimiento. Para una guía detallada de ejercicios de core, consulta la **Tabla 2** a continuación.</p>
+                            </div>
+                        </details>
+                    </div>
+
+                    <h3 class="text-lg font-bold mt-8 mb-4 text-blue-800">Fases de Recuperación y Retorno Progresivo a la Actividad Física</h3>
+                    <p class="mb-6 text-zinc-600">Estas fases son cruciales para tu recuperación. Sigue estas pautas estrictamente y escucha a tu cuerpo.</p>
+
+                    <div class="space-y-4">
+                        <details class="group bg-zinc-50 p-4 rounded-lg border border-zinc-200">
+                            <summary class="font-semibold text-lg cursor-pointer flex justify-between items-center">
+                                Fase 1: Recuperación Inicial (0-2 Semanas)
+                                <span class="text-blue-600 text-sm group-open:hidden">Mostrar</span>
+                                <span class="text-blue-600 text-sm hidden group-open:inline">Ocultar</span>
+                            </summary>
+                            <div class="mt-4 text-zinc-700 space-y-2 text-sm">
+                                <p><strong>Objetivo:</strong> Cicatrización, manejo del dolor y movimiento terapéutico.</p>
+                                <p><strong>✔️ Permitido:</strong> Caminatas muy cortas y lentas, subir escaleras con cuidado, ejercicios de respiración profunda.</p>
+                                <p><strong>❌ Evitar:</strong> CUALQUIER actividad extenuante, levantar objetos pesados, conducir if toma analgésicos.</p>
+                            </div>
+                        </details>
+
+                        <details class="group bg-zinc-50 p-4 rounded-lg border border-zinc-200">
+                            <summary class="font-semibold text-lg cursor-pointer flex justify-between items-center">
+                                Fase 2: Movilidad y Fortalecimiento Moderado (2-6 Semanas)
+                                <span class="text-blue-600 text-sm group-open:hidden">Mostrar</span>
+                                <span class="text-blue-600 text-sm hidden group-open:inline">Ocultar</span>
+                            </summary>
+                            <div class="mt-4 text-zinc-700 space-y-2 text-sm">
+                               <p><strong>Objetivo:</strong> Transición a la actividad controlada, restaurar función sin comprometer la reparación.</p>
+                               <p><strong>✔️ Permitido:</strong> Aumentar caminatas a 20-30 min, bicicleta estacionaria o elíptica (moderada, sin dolor), iniciar ejercicios de core básicos (ver Tabla 2).</p>
+                               <p><strong>❌ Evitar:</strong> Ejercicio intenso, levantar más de 5 kg.</p>
+                            </div>
+                        </details>
+                        
+                        <details class="group bg-zinc-50 p-4 rounded-lg border border-zinc-200">
+                            <summary class="font-semibold text-lg cursor-pointer flex justify-between items-center">
+                                Fase 3: Retorno Progresivo a la Actividad Intensa (6 Semanas - 3 Meses)
+                                <span class="text-blue-600 text-sm group-open:hidden">Mostrar</span>
+                                <span class="text-blue-600 text-sm hidden group-open:inline">Ocultar</span>
+                            </summary>
+                             <div class="mt-4 text-zinc-700 space-y-2 text-sm">
+                                <p><strong>Objetivo:</strong> Progresión cuidadosa en intensidad y volumen, consolidación del tejido.</p>
+                                <p><strong>✔️ Permitido:</strong> Aumento gradual de intensidad en caminata/trote, progresión de core, introducción de fuerza con peso corporal/bandas.</p>
+                                <p><strong>❌ Evitar:</strong> Levantamiento de pesas significativas (hasta aprobación médica), deportes de contacto.</p>
+                             </div>
+                        </details>
+                        <details class="group bg-zinc-50 p-4 rounded-lg border border-zinc-200">
+                            <summary class="font-semibold text-lg cursor-pointer flex justify-between items-center">
+                                Optimización y Rendimiento (3+ Meses)
+                                <span class="text-blue-600 text-sm group-open:hidden">Mostrar</span>
+                                <span class="text-blue-600 text-sm hidden group-open:inline">Ocultar</span>
+                            </summary>
+                             <div class="mt-4 text-zinc-700 space-y-2 text-sm">
+                                <p><strong>Objetivo:</strong> Retorno a actividades previas y objetivos de rendimiento.</p>
+                                <p><strong>✔️ Permitido:</strong> Reintroducción gradual de HIIT, entrenamiento de velocidad, entrenamiento de fuerza con pesas (progresión de cargas y ejercicios), deportes.</p>
+                                <p><strong>❌ Evitar:</strong> Actividades que generen dolor o presión en la zona de la cirugía.</p>
+                             </div>
+                        </details>
+                    </div>
+
+                    <h3 class="text-xl font-bold mt-8 mb-4 text-blue-800">Tabla 2: Ejercicios de Fortalecimiento del Core Post-Hernioplastia</h3>
+                    <p class="mb-4 text-zinc-600">Esta tabla detalla los ejercicios de core recomendados, su progresión y notas de seguridad para tu recuperación. Se incluyen ejercicios para estabilizadores locales (músculos más profundos que controlan la estabilidad segmental) y globales (músculos más superficiales que generan movimiento y resisten fuerzas externas).</p>
+                    <div class="overflow-x-auto">
+                        <table class="styled-table">
+                            <thead>
+                                <tr>
+                                    <th>Ejercicio</th>
+                                    <th>Descripción</th>
+                                    <th>Nivel de Progresión</th>
+                                    <th>Fase de Recuperación Recomendada</th>
+                                    <th>Notas de Seguridad</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${coreExercisesData.map(item => `
+                                    <tr>
+                                        <td><strong>${item.exercise}</strong></td>
+                                        <td>${item.description}</td>
+                                        <td>${item.progression}</td>
+                                        <td>${item.phase}</td>
+                                        <td>${item.notes}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderScience() {
+            contentArea.innerHTML = `
+                <div class="bg-white p-6 rounded-lg shadow-sm">
+                    <h2 class="text-xl font-bold mb-2 text-blue-800">🔬 Fundamentos Científicos Avanzados del Plan</h2>
+                    <p class="mb-6 text-zinc-600">Profundiza en la ciencia detrás de tu plan de entrenamiento para entender cómo cada aspecto contribuye a tus objetivos.</p>
+
+                    <div class="space-y-4">
+                        <details class="group bg-zinc-50 p-4 rounded-lg border border-zinc-200">
+                            <summary class="font-semibold text-lg cursor-pointer flex justify-between items-center">
+                                Investigación Científica Exhaustiva: Metodología y Fuentes
+                                <span class="text-blue-600 text-sm group-open:hidden">Mostrar</span>
+                                <span class="text-blue-600 text-sm hidden group-open:inline">Ocultar</span>
+                            </summary>
+                            <div class="mt-4 text-zinc-700 space-y-2">
+                                <p>Este plan ha sido diseñado basándose en una revisión exhaustiva de la literatura científica disponible en bases de datos como PubMed, NCBI, Web of Science, SCOPUS, Google Scholar, SciELO, ERIC, BASE, DOAJ, ScienceDirect, Redalyc, Dialnet, JURN, Semantic Scholar y WorldWideScience. Se priorizó la evidencia de alta calidad, incluyendo revisiones sistemáticas, metaanálisis y ensayos controlados aleatorios, para asegurar que cada recomendación esté fundamentada en datos sólidos y las mejores prácticas actuales en fisiología y neurociencia del ejercicio, así como en rehabilitación.</p>
+                            </div>
+                        </details>
+
+                        <details class="group bg-zinc-50 p-4 rounded-lg border border-zinc-200">
+                            <summary class="font-semibold text-lg cursor-pointer flex justify-between items-center">
+                                Fisiología de la Pérdida de Grasa: Profundizando
+                                <span class="text-blue-600 text-sm group-open:hidden">Mostrar</span>
+                                <span class="text-blue-600 text-sm hidden group-open:inline">Ocultar</span>
+                            </summary>
+                            <div class="mt-4 text-zinc-700 space-y-2">
+                                <h4 class="font-semibold text-md text-blue-700">1. Mecanismos celulares de la oxidación de grasa</h4>
+                                <p class="text-sm">La oxidación de grasas ocurre principalmente en las mitocondrias de las células musculares. Los triglicéridos almacenados en el tejido adiposo son hidrolizados en ácidos grasos libres y glicerol (lipólisis), que luego son transportados a las células musculares. Dentro de la mitocondria, los ácidos grasos sufren beta-oxidación para producir acetil-CoA, que entra en el ciclo de Krebs y la cadena de transporte de electrones para generar ATP (energía). El ejercicio, especialmente el aeróbico, estimula la expresión de enzimas involucradas en la beta-oxidación y aumenta la densidad mitocondrial, mejorando la capacidad del músculo para quemar grasa.</p>
+                                <h4 class="font-semibold text-md text-blue-700">2. Regulación hormonal y el balance energético</h4>
+                                <p class="text-sm">El balance energético está finamente regulado por un complejo sistema hormonal. Hormonas como la leptina (producida por el tejido adiposo, señal de saciedad), grelina (producida en el estómago, señal de hambre), insulina (regula glucosa y almacenamiento de energía), y cortisol (hormona del estrés) interactúan para influir en el apetito, el metabolismo y el almacenamiento de grasa. Un déficit calórico prolongado puede alterar estas hormonas, llevando a una "adaptación metabólica" que dificulta la pérdida de peso. El entrenamiento de fuerza y una ingesta adecuada de proteínas ayudan a mitigar estos efectos, manteniendo el metabolismo activo y preservando la masa muscular.</p>
+                            </div>
+                        </details>
+
+                        <details class="group bg-zinc-50 p-4 rounded-lg border border-zinc-200">
+                            <summary class="font-semibold text-lg cursor-pointer flex justify-between items-center">
+                                El Poder de la Inclinación
+                                <span class="text-blue-600 text-sm group-open:hidden">Mostrar</span>
+                                <span class="text-blue-600 text-sm hidden group-open:inline">Ocultar</span>
+                            </summary>
+                            <div class="mt-4 text-zinc-700 space-y-2">
+                                <p class="text-sm">La inclinación en la trotadora es una herramienta potente para aumentar la intensidad del ejercicio sin necesidad de incrementar la velocidad, lo que reduce el impacto en las articulaciones. Esto es particularmente beneficioso para la pérdida de grasa, ya que eleva significativamente el gasto calórico y activa más músculos de las piernas y glúteos. Permite un entrenamiento cardiovascular desafiante con menor riesgo de estrés articular, ideal para la fase de recuperación y para maximizar la quema de calorías de forma segura.</p>
+                            </div>
+                        </details>
+
+                        <details class="group bg-zinc-50 p-4 rounded-lg border border-zinc-200">
+                            <summary class="font-semibold text-lg cursor-pointer flex justify-between items-center">
+                                Cardio ¿en Ayunas o Alimentado?
+                                <span class="text-blue-600 text-sm group-open:hidden">Mostrar</span>
+                                <span class="text-blue-600 text-sm hidden group-open:inline">Ocultar</span>
+                            </summary>
+                            <div class="mt-4 text-zinc-700 space-y-2">
+                                <p class="text-sm">La investigación actual sugiere que no hay una diferencia significativa en la pérdida de grasa total a largo plazo entre realizar cardio en ayunas o después de haber comido, siempre que el balance calórico diario sea el mismo. Si bien el cardio en ayunas puede aumentar la oxidación de grasa durante la sesión, el cuerpo compensa esto a lo largo del día. La elección debe basarse en la preferencia personal, la comodidad y el rendimiento individual, sin que sea un factor determinante para el éxito en la pérdida de grasa.</p>
+                            </div>
+                        </details>
+
+                        <details class="group bg-zinc-50 p-4 rounded-lg border border-zinc-200">
+                            <summary class="font-semibold text-lg cursor-pointer flex justify-between items-center">
+                                Modalidades de Entrenamiento: LISS, MISS y HIIT
+                                <span class="text-blue-600 text-sm group-open:hidden">Mostrar</span>
+                                <span class="text-blue-600 text-sm hidden group-open:inline">Ocultar</span>
+                            </summary>
+                            <div class="mt-4 text-zinc-700 space-y-2">
+                                <p class="text-sm">La combinación de diferentes intensidades maximiza los beneficios:</p>
+                                <ul class="list-disc list-inside ml-4 mt-1 text-sm">
+                                    <li><strong>LISS (Low-Intensity Steady State):</strong> Ejercicio de baja intensidad y duración prolongada. Ideal para la recuperación, mejora de la resistencia de base y quema de grasa sin alto impacto.</li>
+                                    <li><strong>MISS (Moderate-Intensity Steady State):</strong> Intensidad moderada y constante. Ofrece un buen equilibrio entre gasto calórico y duración, siendo un puente hacia mayores intensidades.</li>
+                                    <li><strong>HIIT (High-Intensity Interval Training):</strong> Alterna ráfagas cortas de máximo esfuerzo con períodos de recuperación. Altamente eficiente en tiempo, mejora la capacidad cardiovascular y genera un "efecto postcombustión" (EPOC) que quema calorías después del entrenamiento.</li>
+                                </ul>
+                            </div>
+                        </details>
+
+                        <details class="group bg-zinc-50 p-4 rounded-lg border border-zinc-200">
+                            <summary class="font-semibold text-lg cursor-pointer flex justify-between items-center">
+                                La Importancia de los Músculos Estabilizadores (Locales y Globales) y los Ejercicios Isométricos
+                                <span class="text-blue-600 text-sm group-open:hidden">Mostrar</span>
+                                <span class="text-blue-600 text-sm hidden group-open:inline">Ocultar</span>
+                            </summary>
+                            <div class="mt-4 text-zinc-700 space-y-2">
+                                <p class="text-sm">Los músculos estabilizadores son esenciales para la eficiencia del movimiento, la prevención de lesiones y la protección de las articulaciones, especialmente la columna vertebral. Se dividen en:</p>
+                                <ul class="list-disc list-inside ml-4 mt-1 text-sm">
+                                    <li><strong>Estabilizadores Locales:</strong> Músculos profundos (ej. transverso abdominal, multífido) que cruzan pocas articulaciones. Su función principal es proporcionar estabilidad segmental y control fino, activándose a bajas cargas para mantener la alineación articular.</li>
+                                    <li><strong>Estabilizadores Globales:</strong> Músculos más superficiales (ej. recto abdominal, oblicuos externos) que cruzan múltiples articulaciones. Generan movimiento y resisten fuerzas externas mayores, influyendo en la postura y el control del movimiento general.</li>
+                                </ul>
+                                <p class="text-sm mt-2">La deficiencia en estos músculos aumenta el riesgo de lesiones, incluyendo el dolor lumbar. Aquí es donde los **ejercicios isométricos** juegan un papel crucial:</p>
+                                <ul class="list-disc list-inside ml-4 mt-1 text-sm">
+                                    <li><strong>Activación Específica:</strong> Los isométricos (contracciones musculares sin cambio de longitud ni movimiento articular) son ideales para activar y fortalecer selectivamente estos músculos estabilizadores, tanto locales como globales.</li>
+                                    <li><strong>Estabilidad y Control Postural:</strong> Al mantener una posición estática, se entrena al sistema nervioso para coordinar y sincronizar los músculos, mejorando la estabilidad muscular y el control postural.</li>
+                                    <li><strong>Seguridad en la Rehabilitación:</strong> Son de bajo impacto y no generan movimientos bruscos en las articulaciones, lo que los hace particularmente seguros y efectivos en fases de rehabilitación, como la post-hernioplastia, permitiendo fortalecer la zona sin riesgo de tensión excesiva.</li>
+                                    <li><strong>Eficiencia del Movimiento:</strong> Un core fuerte y estable, gracias a la activación de estos músculos, permite que los músculos más grandes (motores primarios) trabajen de manera más eficiente, mejorando el rendimiento deportivo y reduciendo el riesgo de lesiones.</li>
+                                </ul>
+                                <p class="text-sm mt-2">Desde la perspectiva de la **neurociencia del ejercicio**, los isométricos mejoran la **coordinación intermuscular** y la **plasticidad motora**, es decir, la capacidad del sistema nervioso para adaptarse y optimizar el control de los movimientos. Esto se traduce en una mejor "comunicación" entre el cerebro y los músculos, resultando en movimientos más suaves, precisos y seguros.</p>
+                            </div>
+                        </details>
+                        
+                        <details class="group bg-zinc-50 p-4 rounded-lg border border-zinc-200">
+                            <summary class="font-semibold text-lg cursor-pointer flex justify-between items-center">
+                                Optimización del Entrenamiento
+                                <span class="text-blue-600 text-sm group-open:hidden">Mostrar</span>
+                                <span class="text-blue-600 text-sm hidden group-open:inline">Ocultar</span>
+                            </summary>
+                            <div class="mt-4 text-zinc-700 space-y-2">
+                                <h4 class="font-semibold text-md text-blue-700">1. Adaptaciones neuromusculares y eficiencia del movimiento</h4>
+                                <p class="text-sm">El entrenamiento no solo afecta el sistema cardiovascular, sino también el neuromuscular. Con el tiempo, tu cuerpo mejorará la coordinación inter e intramuscular, la activación de unidades motoras y la eficiencia biomecánica. Esto significa que para la misma velocidad o carga, tu cuerpo gastará menos energía, volviéndose más eficiente. Para seguir progresando en la pérdida de grasa y el rendimiento, es crucial variar los estímulos (velocidad, inclinación, tipo de ejercicio, volumen de fuerza) para desafiar continuamente estas adaptaciones y evitar el estancamiento.</p>
+                                <h4 class="font-semibold text-md text-blue-700">2. Sistemas energéticos dominantes por intensidad</h4>
+                                <p class="text-sm">El cuerpo utiliza diferentes sistemas energéticos según la intensidad y duración del ejercicio:
+                                    <ul class="list-disc list-inside ml-4 mt-1">
+                                        <li><strong>Sistema de Fosfágenos (ATP-PCr):</strong> Predomina en esfuerzos muy cortos y máximos (ej. sprints de 5-10 segundos).</li>
+                                        <li><strong>Glucólisis Anaeróbica:</strong> Para esfuerzos intensos de 10 segundos a 2 minutos (ej. intervalos HIIT).</li>
+                                        <li><strong>Sistema Oxidativo (Aeróbico):</strong> Para esfuerzos de baja a moderada intensidad y larga duración (ej. LISS, MISS), utilizando principalmente grasas y carbohidratos con oxígeno.</li>
+                                    </ul>
+                                    La combinación de LISS, MISS y HIIT en tu plan asegura que se estimulen todos estos sistemas, maximizando la quema de calorías y mejorando la capacidad metabólica general.</p>
+                            </div>
+                        </details>
+
+                        <details class="group bg-zinc-50 p-4 rounded-lg border border-zinc-200">
+                            <summary class="font-semibold text-lg cursor-pointer flex justify-between items-center">
+                                Nutrición para el Rendimiento y la Recuperación
+                                <span class="text-blue-600 text-sm group-open:hidden">Mostrar</span>
+                                <span class="text-blue-600 text-sm hidden group-open:inline">Ocultar</span>
+                            </summary>
+                            <div class="mt-4 text-zinc-700 space-y-2">
+                                <h4 class="font-semibold text-md text-blue-700">1. Macronutrientes: más allá del déficit calórico</h4>
+                                <p class="text-sm">Si bien el déficit calórico es fundamental, la distribución de macronutrientes es clave para la composición corporal y el rendimiento:
+                                    <ul class="list-disc list-inside ml-4 mt-1">
+                                        <li><strong>Proteínas:</strong> Esenciales para la reparación y crecimiento muscular, y para la saciedad. Apunta a 1.6-2.2 g/kg de peso corporal.</li>
+                                        <li><strong>Carbohidratos:</strong> Principal fuente de energía para el ejercicio, especialmente en intensidades moderadas a altas. Prioriza carbohidratos complejos.</li>
+                                        <li><strong>Grasas:</strong> Necesarias para la función hormonal y la absorción de vitaminas. Prioriza grasas saludables.</li>
+                                    </ul>
+                                </p>
+                                <h4 class="font-semibold text-md text-blue-700">2. Micronutrientes y hidratación</h4>
+                                <p class="text-sm">Vitaminas y minerales son vitales para el metabolismo energético, la función inmunológica y la recuperación. Una dieta variada rica en frutas, verduras y granos enteros es fundamental. La hidratación adecuada es crucial para el rendimiento, la termorregulación y la prevención del estreñimiento post-cirugía. Bebe agua constantemente a lo largo del día.</p>
+                            </div>
+                        </details>
+
+                        <details class="group bg-zinc-50 p-4 rounded-lg border border-zinc-200">
+                            <summary class="font-semibold text-lg cursor-pointer flex justify-between items-center">
+                                Elongación y Flexibilidad: Fundamentos y Aplicación
+                                <span class="text-blue-600 text-sm group-open:hidden">Mostrar</span>
+                                <span class="text-blue-600 text-sm hidden group-open:inline">Ocultar</span>
+                            </summary>
+                            <div class="mt-4 text-zinc-700 space-y-2">
+                                <p class="text-sm">La elongación y flexibilidad son componentes cruciales de un programa de entrenamiento integral, contribuyendo a la salud articular, la prevención de lesiones y la mejora del rendimiento. La capacidad de una articulación para moverse a través de su rango completo de movimiento (ROM) es fundamental para la eficiencia biomecánica y la reducción de la rigidez muscular.</p>
+                                <h4 class="font-semibold text-md text-blue-700 mt-2">1. Beneficios de la Elongación y Flexibilidad:</h4>
+                                <ul class="list-disc list-inside ml-4 mt-1 text-sm">
+                                    <li><strong>Mejora del Rango de Movimiento (ROM):</strong> Aumenta la capacidad de las articulaciones para moverse libremente, lo que es vital para la ejecución correcta de los ejercicios y las actividades diarias.</li>
+                                    <li><strong>Reducción de la Rigidez Muscular:</strong> Ayuda a disminuir la tensión en los músculos, lo que puede aliviar molestias y mejorar la postura.</li>
+                                    <li><strong>Potencial Reducción del Riesgo de Lesiones:</strong> Aunque la evidencia es mixta, una buena flexibilidad puede contribuir a la prevención de ciertas lesiones musculares y articulares, especialmente cuando se realiza de forma adecuada.</li>
+                                    <li><strong>Mejora del Rendimiento Atlético:</strong> Los estiramientos dinámicos antes del ejercicio pueden preparar los músculos, mientras que los estiramientos estáticos post-ejercicio pueden ayudar en la recuperación.</li>
+                                    <li><strong>Mejora de la Circulación y Recuperación:</strong> Contribuye a un mejor flujo sanguíneo y a la eliminación de productos de desecho metabólicos, facilitando la recuperación muscular.</li>
+                                </ul>
+                                <h4 class="font-semibold text-md text-blue-700 mt-2">2. Tipos de Estiramientos:</h4>
+                                <ul class="list-disc list-inside ml-4 mt-1 text-sm">
+                                    <li><strong>Estiramiento Dinámico:</strong> Implica movimientos controlados que llevan las articulaciones a través de su rango de movimiento completo. Se recomienda como parte del calentamiento pre-ejercicio para preparar los músculos y aumentar la temperatura corporal. Ejemplos: balanceos de piernas, círculos de brazos, rotaciones de tronco suaves.</li>
+                                    <li><strong>Estiramiento Estático:</strong> Consiste en mantener una posición de estiramiento suave durante un período de tiempo (generalmente 20-30 segundos) sin rebotes. Es más efectivo cuando se realiza después del ejercicio, durante el enfriamiento, para mejorar la flexibilidad a largo plazo y reducir la rigidez muscular post-entrenamiento.</li>
+                                    <li><strong>Facilitación Neuromuscular Propioceptiva (FNP o PNF):</strong> Es una técnica más avanzada que combina estiramientos pasivos con contracciones isométricas de los músculos. Es muy eficaz para aumentar el ROM, pero a menudo requiere la supervisión de un profesional debido a su complejidad.</li>
+                                </ul>
+                                <h4 class="font-semibold text-md text-blue-700 mt-2">3. Recomendaciones para tu Rutina:</h4>
+                                <ul class="list-disc list-inside ml-4 mt-1 text-sm">
+                                    <li><strong>Antes del Ejercicio (Calentamiento):</strong> Realiza de 5 a 10 minutos de estiramientos dinámicos. Esto prepara tus músculos para la actividad, mejora la movilidad articular y reduce el riesgo de lesiones.</li>
+                                    <li><strong>Después del Ejercicio (Enfriamiento):</strong> Dedica de 5 a 10 minutos a estiramientos estáticos. Mantén cada estiramiento durante 20-30 segundos, sin sentir dolor, solo una tensión suave. Esto ayuda a mejorar la flexibilidad, reducir la rigidez y favorecer la recuperación.</li>
+                                    <li><strong>Consideraciones Post-Hernioplastia:</strong> En tu caso, es crucial que cualquier estiramiento, especialmente los que involucren la zona abdominal o inguinal, se realice con extrema precaución y sin generar ningún tipo de dolor o presión en la zona de la cirugía. Escucha a tu cuerpo y, ante la menor molestia, detén el estiramiento.</li>
+                                </ul>
+                            </div>
+                        </details>
+
+                        <details class="group bg-zinc-50 p-4 rounded-lg border border-zinc-200">
+                            <summary class="font-semibold text-lg cursor-pointer flex justify-between items-center">
+                                Movilidad Articular: Fundamentos y Aplicación
+                                <span class="text-blue-600 text-sm group-open:hidden">Mostrar</span>
+                                <span class="text-blue-600 text-sm hidden group-open:inline">Ocultar</span>
+                            </summary>
+                            <div class="mt-4 text-zinc-700 space-y-2">
+                                <p class="text-sm">La **movilidad articular** se refiere a la capacidad de una articulación para moverse activamente a través de su rango completo de movimiento (ROM) con control y fuerza. Es distinta de la flexibilidad, que es el rango de movimiento pasivo de una articulación. La movilidad articular se enfoca en la salud de la articulación misma y su capacidad para moverse de manera eficiente bajo el control del sistema nervioso.</p>
+                                <h4 class="font-semibold text-md text-blue-700 mt-2">1. Beneficios de la Movilidad Articular:</h4>
+                                <ul class="list-disc list-inside ml-4 mt-1 text-sm">
+                                    <li><strong>Mejora de la Salud Articular:</strong> Facilita la lubricación de las articulaciones y la nutrición del cartílago, promoviendo la salud a largo plazo.</li>
+                                    <li><strong>Prevención de Lesiones:</strong> Al mejorar el control y la estabilidad en el rango de movimiento, se reduce el riesgo de lesiones articulares y musculares, especialmente durante movimientos complejos o cargas.</li>
+                                    <li><strong>Optimización del Rendimiento:</strong> Una buena movilidad articular permite ejecutar los ejercicios con una técnica más eficiente y un mayor rango de movimiento, lo que puede traducirse en una mayor activación muscular y un mejor rendimiento deportivo.</li>
+                                    <li><strong>Mejora de la Propiocepción:</strong> Aumenta la conciencia corporal sobre la posición y el movimiento de las articulaciones en el espacio, lo que es fundamental para la coordinación y el equilibrio.</li>
+                                    <li><strong>Reducción de la Rigidez y Dolor:</strong> Puede aliviar la rigidez articular y el dolor asociado, mejorando la calidad de vida y el movimiento diario.</li>
+                                </ul>
+                                <h4 class="font-semibold text-md text-blue-700 mt-2">2. Tipos de Ejercicios de Movilidad Articular:</h4>
+                                <ul class="list-disc list-inside ml-4 mt-1 text-sm">
+                                    <li><strong>Rotaciones Articulares Controladas (CARs):</strong> Son ejercicios donde se mueve una articulación a través de su rango de movimiento más amplio y controlado posible, con la intención de "escanear" y mantener la salud de la cápsula articular. Se realizan lentamente y con la máxima tensión controlada.</li>
+                                    <li><strong>Círculos Articulares:</strong> Movimientos circulares suaves de articulaciones como tobillos, rodillas, caderas, hombros y cuello.</li>
+                                    <li><strong>Movimientos Segmentales:</strong> Ejercicios que aíslan el movimiento en una parte específica de la columna vertebral (ej. rotaciones torácicas).</li>
+                                </ul>
+                                <h4 class="font-semibold text-md text-blue-700 mt-2">3. Recomendaciones para tu Rutina:</h4>
+                                <ul class="list-disc list-inside ml-4 mt-1 text-sm">
+                                    <li><strong>Parte del Calentamiento:</strong> Realiza de 5 a 10 minutos de ejercicios de movilidad articular antes de tu calentamiento dinámico y entrenamiento principal. Esto prepara tus articulaciones y el sistema nervioso para el movimiento. Enfócate en las articulaciones clave para tu actividad (tobillos, caderas, columna torácica, hombros).</li>
+                                    <li><strong>Sesiones Independientes:</strong> La movilidad articular también puede realizarse en sesiones separadas en días de descanso o como una rutina diaria corta para mantener la salud articular.</li>
+                                    <li><strong>Consideraciones Post-Hernioplastia:</strong> Al igual que con los estiramientos, cualquier ejercicio de movilidad que involucre la zona abdominal o inguinal debe realizarse con extrema precaución. Evita cualquier movimiento que genere dolor, tensión o presión en la zona de la cirugía. Prioriza la movilidad de otras articulaciones (tobillos, muñecas, hombros, columna torácica) y reintroduce la movilidad de cadera y columna lumbar de forma muy gradual y controlada.</li>
+                                </ul>
+                            </div>
+                        </details>
+
+                        <details class="group bg-zinc-50 p-4 rounded-lg border border-zinc-200">
+                            <summary class="font-semibold text-lg cursor-pointer flex justify-between items-center">
+                                Psicología del Ejercicio: Estrategias Avanzadas de Adherencia
+                                <span class="text-blue-600 text-sm group-open:hidden">Mostrar</span>
+                                <span class="text-blue-600 text-sm hidden group-open:inline">Ocultar</span>
+                            </summary>
+                            <div class="mt-4 text-zinc-700 space-y-2">
+                                <h4 class="font-semibold text-md text-blue-700">1. Teoría de la autodeterminación y motivación intrínseca</h4>
+                                <p class="text-sm">Esta teoría postula que la motivación es más sostenible cuando proviene de necesidades psicológicas básicas:
+                                    <ul class="list-disc list-inside ml-4 mt-1">
+                                        <li><strong>Autonomía:</strong> Sentir que eliges tus acciones (ej. flexibilidad de horario, elección de MISS vs. LISS).</li>
+                                        <li><strong>Competencia:</strong> Sentirte efectivo y capaz (ej. ver progreso en el gráfico, lograr objetivos semanales).</li>
+                                        <li><strong>Relación:</strong> Sentirte conectado con otros (ej. if entrenas con alguien, compartir logros).</li>
+                                    </ul>
+                                    Fomentar tu motivación intrínseca hará que el ejercicio sea una fuente de disfrute, no solo una obligación.</p>
+                                <h4 class="font-semibold text-md text-blue-700">2. Estrategias cognitivo-conductuales para el cambio de hábito</h4>
+                                <p class="text-sm">Estas estrategias te ayudan a cambiar patrones de pensamiento y comportamiento:
+                                    <ul class="list-disc list-inside ml-4 mt-1">
+                                        <li><strong>Establecimiento de metas:</strong> Metas SMART para un camino claro.</li>
+                                        <li><strong>Auto-monitoreo:</strong> Registrar tu actividad y progreso.</li>
+                                        <li><strong>Reestructuración cognitiva:</strong> Cambiar pensamientos negativos sobre el ejercicio.</li>
+                                        <li><strong>Manejo de contingencias:</strong> Recompensarte por cumplir metas.</li>
+                                        <li><strong>Prevención de recaídas:</strong> Planificar cómo afrontar obstáculos y desmotivación.</li>
+                                    </ul>
+                                </p>
+                            </div>
+                        </details>
+                    </div>
+                </div>
+            `;
+        }
+        
+        const tabButtons = document.querySelectorAll('.tab-btn');
+
+        function switchTab(tab) {
+            appState.currentTab = tab;
+            tabButtons.forEach(button => {
+                if (button.dataset.tab === tab) {
+                    button.classList.add('tab-active');
+                } else {
+                    button.classList.remove('tab-active');
+                }
+            });
+            
+            switch (tab) {
+                case 'plan': // Only 'plan' now
+                    renderPlan();
+                    break;
+                case 'safety':
+                    renderSafety();
+                    break;
+                case 'science':
+                    renderScience();
+                    break;
+            }
+        }
+
+        tabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                switchTab(button.dataset.tab);
+            });
+        });
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            switchTab('plan'); // Load 'plan' by default
+        });
+
+    </script>
+</body>
+</html>
